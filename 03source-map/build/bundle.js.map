@@ -1,0 +1,13 @@
+{
+    "version": 3,
+    "file": "bundle.js",
+    "mappings": ";;;;;AAAA;AACA",
+    "sources": [
+        "webpack://03source-map/./src/main.js"
+    ],
+    "sourcesContent": [
+        "let a = 1\r\nconsole.log(a)\r\n"
+    ],
+    "names": [],
+    "sourceRoot": ""
+}
