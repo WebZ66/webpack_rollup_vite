@@ -345,17 +345,221 @@ npx babel ./src --out-dir ./build --presets=@babel/preset-env
 
 ![image-20231010105728927](https://gitee.com/zhengdashun/pic_bed/raw/master/img/image-20231010105728927.png) 就成功将代码向下兼容。
 
+
+
+webpack和babel的区别：
+
+- webpack打包后的文件会包含模块化的内容,但并没有转译
+
+  ![](https://gitee.com/zhengdashun/pic_bed/raw/master/img/image-20231018150322645.png) 
+
+- babel只是将代码转译，es6转化为es5，语法向下兼容
+
+所以需要将webpack和babel结合在一起
+
+
+
+## babel和webpack结合
+
+`凡是webpack和其他工具结合，都是使用loader。比如ts-loader vue-loader等等`
+
+通过**babel-loader**配合**babel插件**或者是预设
+
+```js
+    module: {
+        rules: [
+            {
+                test: /\.js$/,
+                use: {
+                    loader: 'babel-loader',
+                    options: {
+                        // plugins: [], 该loader所需要的插件或预设
+                        presets: ['@babel/preset-env'],
+                    },
+                },
+            },
+        ],
+    },
+}
+
+```
+
+![image-20231018151018070](https://gitee.com/zhengdashun/pic_bed/raw/master/img/image-20231018151018070.png) 
+
 ***
 
+## **配合webpack使用**
+
+注意：babel还需要配合一系列的插件才能将对应语法进行转化，比如箭头函数转化插件等等，但为了方便起见，它们都放在了 `@babel/preset-env`预设中。
+
+```json
+const { Configuration } = require('webpack')
+const path = require('path')
+/**
+ * @type {Configuration} //配置智能提示
+ */
+module.exports = {
+    mode: 'development',
+    entry: './src/index.js',
+    devtool: false,
+    output: {
+        path: path.resolve(__dirname, './build'),
+        filename: 'bundle.js',
+        clean: true,
+    },
+    module: {
+        rules: [
+            {
+                test: /\.js$/,
+                use: {
+                    loader: 'babel-loader', 
+                    options: {
+                        // plugins: [], 
+                        presets: [
+                            [
+                                '@babel/preset-env',
+                                {
+                                    corejs: 3, //为旧浏览器提供它没有支持的新功能
+                                    useBuiltIns: 'usage', //false: 打包后文件不使用polyfill，这时候不需要corejs
+                                },
+                            ],
+                        ],
+                    },
+                },
+            },
+        ],
+    },
+}
+
+```
 
 
 
 
 
+## webpack结合babel搭建react环境
+
+在react中，class 返回的是render()方法，调用返回jsx，函数组件直接返回jsx。
+
+jsx通过`babel`转化为`React.createElement()`这种`js的函数调用方式`，这样就可以运行在浏览器上。
+
+```js
+//安装react react-dom
+pnpm add react react-dom
+```
+
+```js
+//安装preset预设(react),即babel转化jsx语法所需要的插件
+pnpm add @babel/preset-react -D
+```
+
+```json
+//webpack配置  
+module: {
+        rules: [
+            {
+                test: /\.jsx?$/,
+                use: {
+                    loader: 'babel-loader',
+                    options: {
+                        //两个预设，一个处理普通js，一个处理jsx
+                        presets: [['@babel/preset-env',{}], ['@babel/preset-react']],
+                    },
+                },
+            },
+        ],
+    },
+```
+
+在入口文件main.js中创建根节点App
+
+```js
+import React from 'react'
+import ReactDOM from 'react-dom/client'
+import App from './react/App.jsx'
+const root = ReactDOM.createRoot(document.querySelector('#root'))
+root.render(<App />)
+```
 
 
 
 
+
+## webpack结合babel搭建TS环境
+
+webpack打包ts代码可以使用两种方法：
+
+①直接使用`ts-loader`。注意，需要配置tsconfig.json文件，tsc --init
+
+​	缺点：ts-loader只能将ts转化为js，如果想要添加polyfill是无能为力的
+
+②使用`babel-loader`
+
+- 因为ts-loader中没有polyfill，如果ts代码中包含了一些比较新的api(比如str.includes())，那么打包会报错。
+
+  **因此，开发中最好还是使用babel-loader处理ts代码**
+
+  **但是，babel-loader在编译的过程中，`不会对类型错误进行检测`**
+
+安装关于ts的预设
+
+```js
+pnpm add @babel/preset-typescript -D
+```
+
+![image-20231026144439116](https://gitee.com/zhengdashun/pic_bed/raw/master/img/image-20231026144439116.png) 
+
+
+
+# polyfill
+
+可以理解为**垫片、补丁**，将es6代码转化为es5的时候，会帮忙打补丁，`填补一些没有的api。`
+
+![image-20231018170423983](https://gitee.com/zhengdashun/pic_bed/raw/master/img/image-20231018170423983.png) 
+
+可以看到，webpack通过babel转化后的代码，依然含有*`inclueds`*方法，如果浏览器不兼容这个方法，自然就会报错
+
+
+
+## polyfill的使用
+
+> babel7.4.0以前可以使用@babel/polyfill，但现在废弃了
+
+**最新使用：**
+
+```js
+pnpm add core-js regenerator-runtime
+```
+
+useBuiltIns
+
+- false: 打包后文件不使用polyfill，这时候不需要corejs
+- usage:babel转换过程中，`会自动引入需要的api`
+
+```js
+ module: {
+        rules: [
+            {
+                test: /\.js$/,
+                use: {
+                    loader: 'babel-loader',
+                    options: {
+                        // plugins: [],
+                        presets: [
+                            [
+                                '@babel/preset-env',
+                                {
+                                    corejs: 3,
+                                    useBuiltIns: 'usage', //false: 打包后文件不使用polyfill，这时候不需要corejs
+                                },
+                            ],
+                        ],
+                    },
+                },
+            },
+        ],
+    },
+```
 
 
 
@@ -436,6 +640,9 @@ module.exports = {
 > Plugin:可以用于执行更广泛的任务，进行打包优化，环境变量注入等。
 
 ## clean插件
+
+`最新版本的webpack-cli只需要在ouput中配置clean:true即可`
+
 **每次修改配置，都需要重新打包，而且需要手动删除之前的dist文件，而clean插件就可以帮助我们自动删除dist文件**
 
 安装：` npm install clean-webpack-plugin -D`
@@ -488,15 +695,22 @@ plugins: [new CleanWebpackPlugin(), new HtmlWebpackPlugin({title:'电商项目',
 ![image.png](https://p9-juejin.byteimg.com/tos-cn-i-k3u1fbpfcp/7a68f49cabb44ca48f5e45bb97d6ee53~tplv-k3u1fbpfcp-watermark.image?)
 
 
-# Webpack配置本地服务器 (!important)
+
+***
+
+
+
+
+# Webpack配置本地服务器
 
 作用：实现自动编译，热更新。
 
-webpack-dev-server会直接将模块进行打包，并且把东西放到`内存`里，(所以`build文件夹下是没东西的`，放到磁盘效率低下),然后搭建一个本地服务器，直接读取对应打包后的内容，浏览器再向本地服务器发起请求。
+webpack-dev-server会直接将`模块进行打包`，并且把东西放到`内存`里，(所以`build文件夹下是没东西的`，放到磁盘效率低下),然后搭建一个本地服务器，浏览器再向本地服务器发起请求。
 
 ## 安装配置
 
 `npm install webpack-dev-server -D`
+
 ```
 在package.json中 直接配置serve命令， webpack serve。
 配置serve命令
@@ -508,7 +722,22 @@ webpack-dev-server会直接将模块进行打包，并且把东西放到`内存`
 
 ```
 
+
+
+## 静态资源文件夹
+
+静态资源：内容长时间不发生改变的资源文件。
+
+静态资源文件夹：即存放静态资源的文件夹。
+
+> 当浏览器在地址栏中输入localhost:8080时，它默认请求的是本地服务器的index.html文件，webpack-dev-serve会默认返回一个index.html文档，同时，在其中通过script标签（路径是绝对路径）导入对应打包好的js文件。
+
+express或koa中，需要安装对应的静态资源插件，然后定义一个静态资源文件夹，定义一个index.html文档在其中，并且导入的css和js文件都需要通过绝对路径来导入。这样，请求时，服务器会自动生成对应的静态资源路由，并返回对应的静态资源。
+
+
+
 ## 认识模块热更新  HMR
+
 **如果只是一个模块发生了改变，正常情况下所有的模块都需要重新编译打包渲染。**
 
 `HMR：`模块内部发生改变后，无需重新编译所有模块，只需要重新编译打包当前模块和当前模块所依赖的模块。

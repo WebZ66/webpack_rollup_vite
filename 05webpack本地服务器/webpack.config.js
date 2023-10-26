@@ -1,6 +1,6 @@
 const { Configuration } = require('webpack')
 const HtmlWebpackPlugin = require('html-webpack-plugin')
-const { VueLoaderPlugin } = require('vue-loader/lib/index')
+
 const path = require('path')
 /**
  * @type {Configuration} //配置智能提示
@@ -20,10 +20,6 @@ module.exports = {
     module: {
         rules: [
             {
-                test: /\.vue$/,
-                use: ['vue-loader'],
-            },
-            {
                 test: /\.jsx?$/,
                 use: {
                     loader: 'babel-loader',
@@ -37,8 +33,6 @@ module.exports = {
                 use: {
                     loader: 'babel-loader',
                     options: {
-                        configFile: path.resolve(process.cwd(), 'tsconfig.json'),
-                        appendTsSuffixTo: [/\.vue$/],
                         presets: [
                             [
                                 '@babel/preset-typescript',
@@ -58,6 +52,6 @@ module.exports = {
         new HtmlWebpackPlugin({
             template: './index.html',
         }),
-        new VueLoaderPlugin(),
     ],
+    devServer: {},
 }

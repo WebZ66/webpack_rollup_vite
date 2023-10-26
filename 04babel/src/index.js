@@ -1,14 +1,11 @@
-const message = 'hello message'
-console.log(message)
 
-const foo = () => {
-    console.log('foo function')
-}
+import { createApp } from 'vue'
+import app from './vue/index.vue'
 
-foo()
+createApp(app).render('#app')
 
-const info = 'corder why'
-console.log(info.includes('corder'))
+// const root = ReactDOM.createRoot(document.querySelector('#root'))
+// root.render(<App />)
 
 /* 
 ①解析阶段 将js代码转化为抽象语法树AST，进行词法分析和语法分析
