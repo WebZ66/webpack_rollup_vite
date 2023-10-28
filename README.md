@@ -776,10 +776,126 @@ module.exports = {
 
 ```
 
+***
+
+
+
+# Webpack性能优化
+
+如果将所有模块打包成一个bundle.js，那么bundle.js就会非常的大，首屏渲染速度会大大降低。
+
+解决措施：
+
+- 分包处理 (prefetch)
+- SSR(加快首屏渲染速度，增加SEO优化)
+
+
+
+## 代码分离
+
+主要目的：将`代码分离到不同的bundle中`，之后我们可以 `按需加载`，或者 `并行加载这些文件`
+
+默认情况下，所有打包后的js代码(业务代码，第三方依赖代码，暂时没用的代码)，会在首页全部加载，这就会影响到首页加载速度(即首页白屏)，`代码分离可以分出更小的bundle`，控制`资源加载优先级`，提供`代码的加载性能`。
+
+
+
+Webpack常用的代码分离方式
+
+- [ ] `入口起点`：使用entry手动分离代码，配置多入口
+- [ ] `防止重复`，使用enrty Dependecies去重和分离代码
+- [ ] `动态导入`：通过模块的内联函数调用来分离代码
+
+
+
+### 多入口分包(比较少用)
+
+多入口的目的是将每个入口文件和其依赖的内容打包到不同的文件里，并不是放在同一个bundle.js中
+
+**多入口`手动分包`：配置两个入口，出口名动态设置**
+
+![image-20231028144601851](https://gitee.com/zhengdashun/pic_bed/raw/master/img/image-20231028144601851.png)
+
+**缺点：如果两个入口文件里，依赖了同一个库，那么这个库会被打包多次。造成性能浪费**
+
+**解决方式：告诉webpack某些包是这些入口文件里共享的。它会被单独打包到一个bundle.js中**
+
+![image-20231028145446701](https://gitee.com/zhengdashun/pic_bed/raw/master/img/image-20231028145446701.png)
+
+
+
+### 动态导入
+
+> 比如有个模块bar.js，我们希望在代码运行中，如某个条件成立时，才加载该模块。因为我们`不确定这个模块中的代码一定会用到`，所以最好`拆分成一个独立的js文件`，这样就可以保证`不被用到时，浏览器不需要加载和处理该文件的js代码`。这时候就可以使用动态导入。
+
+**最常见的场景：路由组件的动态导入，会被拆分成独立的js文件**
+
+webpack提供两种动态导入的方式
+
+- `import()语法`(import函数也是最推荐的方式)
+-  `require.ensure`（不推荐使用）
+
+![image-20231028150656604](https://gitee.com/zhengdashun/pic_bed/raw/master/img/image-20231028150656604.png)
+
+**它会被拆分成两个独立的js文件，在首屏加载的时候，根本没有加载该两个js文件，只有满足条件(点击btn1或者btn2)才会加载对应的js**
+
+**对每个包单独进行命名**
+
+```js
+module.exports = {
+  mode: 'development',
+  entry: './src/index.js',
+  devtool: false,
+  output: {
+    path: path.resolve(__dirname, './build'),
+    //placeholder
+    filename: '[name]-bundle.js',
+    clean: true,
+    //单独针对分包的文件进行命名
+    chunkFilename: '[id]_[name]_chunk.js'
+  },
+ }
+```
+
+
+
+### SplitChunks
+
+> 对于一些第三方库，如果不做处理，那么默认会被打包到bundle.js文件中，会让bundle.js特别大，影响首屏加载速率。
+
+这是一种默认安装和集成的插件，只需要提供SplitChunksPlugin相关的配置信息即可实现一种分包方式
+
+```js
+//优化配置
+  optimization: {
+    splitChunks: {
+      //默认只对异步import()导入的进行分包
+      // chunks:'async'
+      chunks: 'all',
+      //当一个包大于指定的大小时，继续进行拆包。对包大小的控制(不是很重要)
+      maxSize: 20000,
+      //将包拆分成不小于多少kb
+      minSize: 10000
+    }
+  }
+```
+
+![image-20231028152701433](https://gitee.com/zhengdashun/pic_bed/raw/master/img/image-20231028152701433.png)
+
+**成功实现将react，axios等第三方库分包到vendros.js中**
+
+
+
+
+
+
+
+
+
 # 环境区分
+
 >创建config文件夹，同时配置不同的webpack.config.js
 
-![image.png](https://gitee.com/zhengdashun/pic_bed/raw/master/img/788aa1b8d3504cddb44b3d14ec4df58e~tplv-k3u1fbpfcp-watermark.image)
+![image.png](https://gitee.com/zhengdashun/pic_bed/raw/master/img/788aa1b8d3504cddb44b3d14ec4df58e~tplv-k3u1fbpfcp-watermark.image) 
 
 > 根据不同的环境 配置不同命令
 
