@@ -1,7 +1,7 @@
 ---
 highlight: a11y-dark
 ---
-# webpack学习
+# webpack
 > 日常开发都是基于脚手架开发，如vue-cli、creat-react-app都是基于webpack支持模块化开发。
 
 **webpack：基于模块化的静态打包工具。它把项目中的所有文件划分成模块，然后根据模块之间的依赖关系最后打包生成静态文件(js、css等等)。**
@@ -14,15 +14,12 @@ style-loader：通过js创建出一个style标签，从而将样式注入到head
 
 
 
-# webpack安装
+## 安装
 `npm install webpack webpack-cli -D`
 
 开发时依赖，生成环境自然不需要webpack，只需要webpack打包后的静态文件即可。
 
 
-
-
-# webpack打包基础
 
 ## npx是什么
 npm与npx是完全不同的
@@ -745,7 +742,7 @@ express或koa中，需要安装对应的静态资源插件，然后定义一个�
 **开启HMR**
 devServer:{hot:true}
 
-```
+```json
 const path = require('path')
 const HtmlWebpackPlugin = require('html-webpack-plugin')
 module.exports = {
@@ -776,7 +773,29 @@ module.exports = {
 
 ```
 
+***
+
+
+
+# Webpack性能优化
+
+webpack性能优化较多，可以将其进行分类
+
+- [ ] 优化一：打包后的结果（分包处理、减小包体积、CDN服务器）
+- [ ] 优化二：优化打包速度(比如exclude、cache-loader)
+
+
+
+
+
+
+
+
+
+
+
 # 环境区分
+
 >创建config文件夹，同时配置不同的webpack.config.js
 
 ![image.png](https://gitee.com/zhengdashun/pic_bed/raw/master/img/788aa1b8d3504cddb44b3d14ec4df58e~tplv-k3u1fbpfcp-watermark.image)
