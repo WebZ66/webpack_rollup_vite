@@ -57,5 +57,17 @@ module.exports = {
       template: './index.html'
     })
   ],
-  devServer: {}
+  devServer: {},
+  //优化配置
+  optimization: {
+    splitChunks: {
+      //默认只对异步import()导入的进行分包
+      // chunks:'async'
+      chunks: 'all',
+      //自己对需要进行拆包的内容进行分组
+      cacheGroups: {
+        
+      }
+    }
+  }
 }

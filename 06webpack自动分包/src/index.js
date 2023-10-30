@@ -1,5 +1,6 @@
 //index.js作为入口
-
+import axios from 'axios'
+import react from 'react'
 const message = 'Hello message'
 console.log(message)
 
