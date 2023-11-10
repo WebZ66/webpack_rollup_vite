@@ -779,12 +779,21 @@ module.exports = {
 
 # Webpack性能优化
 
+webpack性能优化较多，可以将其进行分类
+
+- [ ] 优化一：打包后的结果（分包处理、减小包体积、CDN服务器）
+- [ ] 优化二：优化打包速度(比如exclude、cache-loader)
+
+
+
 如果将所有模块打包成一个bundle.js，那么bundle.js就会非常的大，首屏渲染速度会大大降低。
 
 解决措施：
 
 - 分包处理 (prefetch)
 - SSR(加快首屏渲染速度，增加SEO优化)
+
+
 
 
 
@@ -798,7 +807,7 @@ module.exports = {
 
 Webpack常用的代码分离方式
 
-- [ ] `入口起点`：使用entry手动分离代码，配置多入口
+- [ ] `入口起点`：使用entry手动分离代码，配置多入口(比较少用)
 - [ ] `防止重复`，使用enrty Dependecies去重和分离代码
 - [ ] `动态导入`：通过模块的内联函数调用来分离代码
 
@@ -828,8 +837,10 @@ Webpack常用的代码分离方式
 
 webpack提供两种动态导入的方式
 
-- `import()语法`(import函数也是最推荐的方式)
+- `import()语法`(import函数也是最推荐的方式)  
 -  `require.ensure`（不推荐使用）
+
+**一般来说，对于动态导入的文件，我们会将其称为chunk**
 
 ![image-20231028150656604](https://gitee.com/zhengdashun/pic_bed/raw/master/img/image-20231028150656604.png)
 
@@ -847,7 +858,7 @@ module.exports = {
     //placeholder
     filename: '[name]-bundle.js',
     clean: true,
-    //单独针对分包的文件进行命名
+    //单独针对分包的文件（即导入的文件）进行命名
     chunkFilename: '[id]_[name]_chunk.js'
   },
  }
@@ -855,11 +866,20 @@ module.exports = {
 
 
 
-### SplitChunks
+### SplitChunks   插件分包
 
 > 对于一些第三方库，如果不做处理，那么默认会被打包到bundle.js文件中，会让bundle.js特别大，影响首屏加载速率。
 
-这是一种默认安装和集成的插件，只需要提供SplitChunksPlugin相关的配置信息即可实现一种分包方式
+这是一种`默认安装和集成的插件`，只需要提供SplitChunksPlugin相关的配置信息即可实现一种分包方式，将其单独打包到一个vendor.js中。
+
+| 属性     | 值                                                           | 作用                                                         |
+| -------- | ------------------------------------------------------------ | ------------------------------------------------------------ |
+| chunks   | all、`async(默认)`                                           | 默认只对异步import()导入的进行分包，all对于所有的进行分包    |
+| chunkIds | natural、`named`(推荐开发环境)、`deterministic`(webpack5中才支持，推荐生产环境) | 按照数字的顺序使用ID、development下的默认值，一个可读的ID、确定性的不同编译中不变的数字 |
+
+
+
+**chunks : async （可以对异步导入的包进行拆包）**
 
 ```js
 //优化配置
@@ -871,7 +891,14 @@ module.exports = {
       //当一个包大于指定的大小时，继续进行拆包。对包大小的控制(不是很重要)
       maxSize: 20000,
       //将包拆分成不小于多少kb
-      minSize: 10000
+      minSize: 10000,
+      //自己对需要进行拆包的内容进行分组
+            cacheGroups: {
+                utils: {
+                    test: /utils/,
+                    filename: 'js/[id]_utils.js',
+                },
+            },
     }
   }
 ```
@@ -882,9 +909,13 @@ module.exports = {
 
 
 
+***
 
 
 
+![image-20231110143635001](https://gitee.com/zhengdashun/pic_bed/raw/master/img/image-20231110143635001.png)
+
+**将utils下的文件单独打包到一个vendor.js中，不再直接打包到主包里**
 
 
 
@@ -892,18 +923,180 @@ module.exports = {
 
 
 
-# Webpack性能优化
+### Prefetch和Preload
 
-webpack性能优化较多，可以将其进行分类
+webpack v4.6.0+ 增加了 `对预获取和预加载的支持`
 
-- [ ] 优化一：打包后的结果（分包处理、减小包体积、CDN服务器）
-- [ ] 优化二：优化打包速度(比如exclude、cache-loader)
+声明import时，使用:
+
+- `prefetch`（预获取）: 被用于**懒加载策略**。它会在**浏览器空闲**时，即浏览器已经加载主要资源并且有**剩余带宽**时，开始加载。这意味着它不会影响初始页面加载时间，因为它是在**后台加载**的。通常用于加载将来可能需要的资源，例如懒加载的代码块或其他不太紧急的资源。
+
+- `preload`（预加载）: 用于**立即加载重要资源**。它会在当前页面加载时立即开始加载，而不管浏览器的空闲状态如何。因此，`preload`可能会**影响初始页面加载性能**，因为它可以竞争主要资源的带宽。通常用于加载当前页面渲染所必需的**关键资源**，如**字体、样式表或脚本**。
+
+
+
+```js
+btn1.onclick = () => {
+    //使用import函数，动态导入，会被单独打包到一个js文件中
+    import(
+        /*webpackPrefetch:true*/     //预获取是以一种注释的方式
+        './router/about'
+    )
+}
+```
+
+**与prefetch指令相比，preload指令有许多不同：**
+
+- preload chunk会在父chunk加载时，以并行方式开始加载，prefetch chunk会在父chunk 加载结束后开始加载
+- preload chunk具有中等优先级，并立即下载。prefetch chunk 在浏览器闲置时下载。
+- preload chunk会在父chunk中立即请求，用于当下时刻。prefetch chunk会用于未来的某个时刻
+
+
+
+***
+
+
+
+## CDN
+
+CDN：内容分发网络，它是指通过相互连接的网络系统，利用最靠近每个用户的服务器，更快更可靠的将文件发送给用户。
+
+
+
+开发中使用CDN的两种方式：
+
+​	1、打包所有的静态资源，放到CDN服务器，用户所有资源通过CDN获取
+
+​    2、一些第三方资源放到CDN服务器上
 
 
 
 
 
 
+
+
+
+## CSS优化
+
+> webpack默认只能打包处理js文件，对于其他类型的文件需要配置对应的loader。同时，默认情况下，css会被webpack打包到主包里，会导致主包很大
+
+**注意：loader的加载顺序是从下往上，从后往前进行加载的**
+
+![image-20231110141604254](https://gitee.com/zhengdashun/pic_bed/raw/master/img/image-20231110141604254.png) 
+
+```
+pnpm add style-loader css-loader -D
+```
+
+![image-20231110141937316](C:\Users\01427334\AppData\Roaming\Typora\typora-user-images\image-20231110141937316.png) **必须css-loader在右边**
+
+
+
+***
+
+### CSS提取
+
+**安装插件 ** 
+
+```php
+pnpm add mini-css-extract-plugin -D  
+```
+
+```js
+//配置loader
+            {
+                test: /\.css$/,
+                //style-loader的作用：将转化后的css文件通过js创建style标签的方式插入到html文档中  (用于开发环境)
+                //MiniCssExtractPlugin.loader：将css文件放到对应文件夹中，并在html中生成link标签导入css样式 (常用于生成环境)
+                use: [MiniCssExtractPlugin.loader, 'css-loader'],
+            },
+                
+//配置plugin
+        plugins: [
+        new MiniCssExtractPlugin({
+            filename: 'css/[name]_css.css',
+            //对于动态导入的css文件进行命名，并放到对应文件夹中import('./xx.css')
+            chunkFilename: 'css/[name]_chunk.css', 
+        }),
+    ],
+```
+
+![image-20231110143842917](https://gitee.com/zhengdashun/pic_bed/raw/master/img/image-20231110143842917.png) 
+
+
+
+***
+
+
+
+## 代码压缩
+
+### Terser
+
+> 作用：Terser可以帮助我们压缩、丑化代码，让我们的bunlde.js更小。
+
+默认情况下，webpack只会从入口文件开始，分析模块之间的依赖关系，进行打包，最后生成一个bundle.js中，`不会对代码进行任何的压缩`
+
+**之所以我们可以看到压缩后的代码，它底层默认使用了`TerserPlugin插件`，对代码进行了压缩和丑化**
+
+(过去我们会使用`uglify-js`来压缩丑化代码，目前已经不再维护了，且不支持es6语法，因此现在用的大部分都是`TerserPlugin`)
+
+**注意：Terser和babel一样，都是独立的工具，我们可以在loader中配置babel-loader，对ts代码或者js代码进行转化。也可以在plugin中配置TerserPlugin，进行代码丑化和压缩**
+
+
+
+**安装：**
+
+```
+pnpm add terser -D
+```
+
+**使用：**
+
+- [ ] 我们可以和babel一样，直接在命令行中使用terser
+
+  ```
+  terser js/field.js -o foo.
+  ```
+
+- [ ] Terser在webpack中配置
+
+  > 在webpack中有一个minimizer属性，在production模式下，默认就是使用TerserPlugin来处理我们的代码。
+  >
+  > 
+
+# Webpack  [hash]
+
+> 在外面给打包文件进行命名的时候，会使用到以下几个placeholder
+
+- [hash] ：hash是通过MD4的散列函数处理，生成一个128位的hash值 (转成了32位的16进制)
+
+- [contenthash]： 根据内容进行打包，如果内容改变(即内容不同)，就会重新发生一个hash值，如果`仅仅main.js`中代码被修改，
+
+  直接导入的`css文件内部未发生改变`，那么`生成的css文件的contenthash值`不会变化。
+
+- [chunkhash]： 它会根据不同的入口进行解析生成hash值。只要任何一个包发生变化，所有的文件chunkhash都会变化
+
+- [name]
+
+- [id]
+
+**结论：尽量使用`contenthash`，减少文件的变化**
+
+> 只有包的名字和整个项目有关系，才用hash，或者和项目里所有依赖有关系，才用chunkhash
+
+```js
+module.exports = {
+    mode: 'development',
+    entry: './src/main.js',
+    output: {
+        path: path.resolve(__dirname, './build'),
+        filename: 'js/[name]_[hash]_bundle.js',
+        clean: true,
+    },
+}
+```
 
 
 
@@ -920,7 +1113,18 @@ webpack性能优化较多，可以将其进行分类
 
 ![image.png](https://gitee.com/zhengdashun/pic_bed/raw/master/img/61e942e1587e45399053a4659523a168~tplv-k3u1fbpfcp-watermark.image)
 
+
+
+***
+
+
+
+# Webpack抽取配置文件
+
+
+
 # webpack配置ts环境
+
 ```
 npm install typescript -g   //tsc --version查看版本 
 npm install ts-node -g  
