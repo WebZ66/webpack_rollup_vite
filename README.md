@@ -4,9 +4,9 @@ highlight: a11y-dark
 # webpack
 > 日常开发都是基于脚手架开发，如vue-cli、creat-react-app都是基于webpack支持模块化开发。
 
-**webpack：基于模块化的静态打包工具。它把项目中的所有文件划分成模块，然后根据模块之间的依赖关系最后打包生成静态文件(js、css等等)。**
+**webpack：基于模块化的静态打包工具。它把项目中的所有文件划分成模块，然后根据模块之间的依赖关系最后打包生成优化后的静态文件(js、css等等)。**
 
-js的打包：将es6转换成es5的语法，即babel-loader。将TS转换成js
+js的打包：基于babel-loader，将es6转换成es5的语法，将TS转换成js，配置polyfill，为其添加新语法等等
 
 css的打包：将less文件转换成css、然后进行打包。
 style-loader：通过js创建出一个style标签，从而将样式注入到head标签中
@@ -350,7 +350,7 @@ webpack和babel的区别：
 
   ![](https://gitee.com/zhengdashun/pic_bed/raw/master/img/image-20231018150322645.png) 
 
-- babel只是将代码转译，es6转化为es5，语法向下兼容
+- babel只是将`代码转译，es6转化为es5，语法向下兼容`
 
 所以需要将webpack和babel结合在一起
 
@@ -361,6 +361,11 @@ webpack和babel的区别：
 `凡是webpack和其他工具结合，都是使用loader。比如ts-loader vue-loader等等`
 
 通过**babel-loader**配合**babel插件**或者是预设
+
+```
+pnpm add @babel/preset-env -D
+pnpm add babel-loader
+```
 
 ```js
     module: {
@@ -700,9 +705,11 @@ plugins: [new CleanWebpackPlugin(), new HtmlWebpackPlugin({title:'电商项目',
 
 # Webpack配置本地服务器
 
-作用：实现自动编译，热更新。
+**作用**：实现自动编译，热更新。
 
-webpack-dev-server会直接将`模块进行打包`，并且把东西放到`内存`里，(所以`build文件夹下是没东西的`，放到磁盘效率低下),然后搭建一个本地服务器，浏览器再向本地服务器发起请求。
+**原理**：webpack-dev-server会直接将`模块进行打包`，并且把东西放到`内存`里，(所以`build文件夹下是没东西的`，放到磁盘效率低下),然后`搭建一个本地服务器`，浏览器`再向本地服务器发起请求`。
+
+
 
 ## 安装配置
 
@@ -727,9 +734,41 @@ webpack-dev-server会直接将`模块进行打包`，并且把东西放到`内�
 
 静态资源文件夹：即存放静态资源的文件夹。
 
-> 当浏览器在地址栏中输入localhost:8080时，它默认请求的是本地服务器的index.html文件，webpack-dev-serve会默认返回一个index.html文档，同时，在其中通过script标签（路径是绝对路径）导入对应打包好的js文件。
+> 当浏览器在地址栏中输入localhost:8080时，它默认请求的是本地服务器的index.html文件，webpack-dev-server(即本地服务器)会默认返回一个index.html文档，同时，在其中通过script标签（路径是绝对路径）导入对应打包好的js文件。
 
 express或koa中，需要安装对应的静态资源插件，然后定义一个静态资源文件夹，定义一个index.html文档在其中，并且导入的css和js文件都需要通过绝对路径来导入。这样，请求时，服务器会自动生成对应的静态资源路由，并返回对应的静态资源。
+
+
+
+**webpack中配置静态资源：**
+
+- 如果直接在模板index.html中导入静态资源文件，那么默认是找不到的。**需要配置一个静态资源文件夹(默认已经帮我们配置好了public)**
+
+  ![image-20231111155807710](https://gitee.com/zhengdashun/pic_bed/raw/master/img/image-20231111155807710.png) 
+
+![image-20231111155820033](https://gitee.com/zhengdashun/pic_bed/raw/master/img/image-20231111155820033.png) 
+
+- 配置
+
+  - 在webpack.config.js中添加devServer，同时配置static属性
+
+    ```js
+        devServer: {
+            static: ['content'], //如果不指明的话，默认public就是静态文件
+        },
+    ```
+
+  - 在template模板html文档中，注意，需要通过绝对路径导入静态文件夹下的js、css等资源文件。(不能包含静态资源目录的路径)
+
+    ![image-20231111161224578](https://gitee.com/zhengdashun/pic_bed/raw/master/img/image-20231111161224578.png)
+
+
+
+在koa和express中，其实也是配置静态资源目录，导入静态资源也是通过`绝对路径`
+
+```js
+express.static(__dirname,'public')
+```
 
 
 
@@ -1026,6 +1065,36 @@ pnpm add mini-css-extract-plugin -D
 
 
 
+### CSS压缩
+
+```
+pnpm add css-minimizer-webpack-plugin -D
+```
+
+```js
+const CssMinimizerPlugin = require('css-minimizer-webpack-plugin')
+
+module.exports = {
+    mode: 'development',
+    entry: './src/main.js',
+    output: {
+        path: path.resolve(__dirname, './build'),
+        filename: 'js/[name]_[hash]_bundle.js',
+        clean: true,
+        chunkFilename: '[chunkhash]_chunk.js',
+    },
+    optimization: {
+        minimize: true,
+        minimizer: [
+            //CSS压缩的插件：CSSMinimizerPlugin
+            new CssMinimizerPlugin(),
+        ],
+    },
+}
+```
+
+
+
 ***
 
 
@@ -1054,17 +1123,86 @@ pnpm add terser -D
 
 **使用：**
 
-- [ ] 我们可以和babel一样，直接在命令行中使用terser
+- [x] 我们可以和babel一样，直接在命令行中使用terser
 
   ```
   terser js/field.js -o foo.
   ```
 
-- [ ] Terser在webpack中配置
+- [x] Terser在webpack中配置
 
-  > 在webpack中有一个minimizer属性，在production模式下，默认就是使用TerserPlugin来处理我们的代码。
-  >
-  > 
+  > 在webpack中有一个minimizer属性，在`production`模式下，默认就是使用`TerserPlugin`来处理我们的代码，帮助我们进行代码压缩
+  
+  **安装：**
+  
+  ```
+  pnpm add css-minimizer-webpack-plugin -D
+  pnpm add terser-webpack-plugin -D
+  ```
+
+```js
+const CssMinimizerPlugin = require('css-minimizer-webpack-plugin')
+const TerserPlugin = require('terser-webpack-plugin')
+module.exports = {
+    mode: 'development',
+    entry: './src/main.js',
+    output: {
+        path: path.resolve(__dirname, './build'),
+        filename: 'js/[name]_[hash]_bundle.js',
+        clean: true,
+        chunkFilename: '[chunkhash]_chunk.js',
+    },
+    optimization: {
+        minimize: true,
+        minimizer: [
+            //JS压缩的插件：TerserPlugin
+            new TerserPlugin()
+            //CSS压缩的插件：CSSMinimizerPlugin
+            new CssMinimizerPlugin(),
+        ],
+    },
+}
+```
+
+
+
+***
+
+
+
+### TreeShaking
+
+`作用：告诉Terser哪些模块中的代码没被用到，可以直接被删除`
+
+- 方案①：**在dev环境下配合Terser开启treeshaking**
+
+  只需要在 **optimization**中配置 **usedExports:true**即可
+
+  ```js
+  module.exports = {
+      mode: 'development',
+      devServer: {
+          static: ['content'],
+      },
+      plugins: [],
+      optimization: {
+          usedExports: true,
+      },
+  }
+  
+  ```
+
+  `注意：prod环境中默认是配置好的，所以无需手动配置`
+
+
+
+- 方案②： **sideEffect(副作用)**，不结合Terser使用
+
+  > sideEffect用于告知webpack compiler哪些模块有`副作用`。副作用的意思是☞模块里面的代码有执行一些特殊的任务，`不能仅仅通过export`来判断这段代码是否有意义
+
+  
+
+
 
 # Webpack  [hash]
 
@@ -1102,24 +1240,124 @@ module.exports = {
 
 
 
-# 环境区分
-
->创建config文件夹，同时配置不同的webpack.config.js
-
-![image.png](https://gitee.com/zhengdashun/pic_bed/raw/master/img/788aa1b8d3504cddb44b3d14ec4df58e~tplv-k3u1fbpfcp-watermark.image) 
-
-> 根据不同的环境 配置不同命令
-
-
-![image.png](https://gitee.com/zhengdashun/pic_bed/raw/master/img/61e942e1587e45399053a4659523a168~tplv-k3u1fbpfcp-watermark.image)
-
-
-
-***
-
 
 
 # Webpack抽取配置文件
+
+## 基础
+
+- 在项目根目录下，创建config文件夹，配置对应的common.config.js
+
+- package.json中，根据不同的命令使用不同的配置文件
+
+  ```
+      "scripts": {
+          "test": "echo \"Error: no test specified\" && exit 1",
+          "build": "webpack --config ./config/common.config.js --env production"
+      },
+  ```
+
+
+
+- **重点：** webpack默认导致的是一个js对象module.exports={} , 但是也可以**导出一个函数**，函数的`返回值必须是配置对象`，同时webpack会往函数的参数列表中`添加一个env的参数`。同时**package.json中要配置对应的env参数**
+
+  ```js
+  module.exports = function (env) {
+      console.log(env)
+      const isProduction = env.production
+      if (isProduction) {
+          //生产环境
+          console.log('生产环境')
+      } else {
+      }
+      return commonConfig
+  }
+  
+  ```
+
+  ![image-20231111153428856](https://gitee.com/zhengdashun/pic_bed/raw/master/img/image-20231111153428856.png) 
+
+
+
+## 分离
+
+将公有的拆分到common.config.js中，将devServer配置在dev.config.js中等等。
+
+![image-20231111162227515](https://gitee.com/zhengdashun/pic_bed/raw/master/img/image-20231111162227515.png) ![image-20231111162236268](https://gitee.com/zhengdashun/pic_bed/raw/master/img/image-20231111162236268.png) 
+
+![image-20231111162208426](https://gitee.com/zhengdashun/pic_bed/raw/master/img/image-20231111162208426.png)
+
+
+
+## 合并
+
+**安装插件**
+
+```js
+pnpm add webpack-merge 
+```
+
+```js
+在common.config.js中导出的函数里进行合并
+module.exports = function (env) {
+    console.log(env)
+    const isProduction = env.production
+    let mergeConfig = isProduction ? prodConfig : devConfig
+    return merge(commonConfig, mergeConfig)
+}
+
+```
+
+
+
+## 优化
+
+比如说dev环境中，我们想用的是style-loader，但是prod环境中，我们需要用MiniCssExtractPlugin.loader，这时候可以把commonConfig配置成一个函数，传入isProduction。以此判断
+
+```js
+const getCommonConfig = function (isProduction) {
+    return {
+        entry: './src/main.js',
+        output: {
+            path: path.resolve(__dirname, '../build'),
+            filename: 'js/[name]_[hash]_bundle.js',
+            clean: true,
+            chunkFilename: 'js/[chunkhash]_chunk.js',
+        },
+        resolve: {
+            extensions: ['.js'],
+        },
+        module: {
+            rules: [
+                {
+                    test: /\.css$/,
+                    //重点在这
+                    use: [isProduction ? MiniCssExtractPlugin.loader : 'style-loader', 'css-loader'],
+                },
+            ],
+        },
+        plugins: [
+            new MiniCssExtractPlugin({
+                filename: 'css/[name]_[contenthash].css',
+                chunkFilename: 'css/[name]_chunk.css',
+            }),
+            new HtmlWebpackPlugin({
+                template: './index.html',
+            }),
+        ],
+    }
+}
+
+module.exports = function (env) {
+    console.log(env)
+    const isProduction = env.production
+    let mergeConfig = isProduction ? prodConfig : devConfig
+    return merge(getCommonConfig(isProduction), mergeConfig)
+}
+
+```
+
+
 
 
 
