@@ -13,4 +13,7 @@ module.exports = {
         static: ['content'],
     },
     plugins: [],
+    optimization: {
+        usedExports: true,
+    },
 }

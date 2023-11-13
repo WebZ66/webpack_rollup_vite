@@ -13,7 +13,7 @@ const path = require('path')
 
 const getCommonConfig = function (isProduction) {
     return {
-        entry: './src/main.js',
+        entry: './src/demo.js',
         output: {
             path: path.resolve(__dirname, '../build'),
             filename: 'js/[name]_[hash]_bundle.js',
@@ -25,6 +25,15 @@ const getCommonConfig = function (isProduction) {
         },
         module: {
             rules: [
+                {
+                    test: /\.js$/,
+                    use: {
+                        loader: 'babel-loader',
+                        options: {
+                            presets: ['@babel/preset-env'],
+                        },
+                    },
+                },
                 {
                     test: /\.css$/,
                     use: [isProduction ? MiniCssExtractPlugin.loader : 'style-loader', 'css-loader'],
