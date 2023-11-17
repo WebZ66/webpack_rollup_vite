@@ -1,1 +1,2 @@
-console.log('123')
+import code from './learn.md'
+document.body.innerHTML = code
