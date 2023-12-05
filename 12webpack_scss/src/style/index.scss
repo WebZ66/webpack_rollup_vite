@@ -1,0 +1,20 @@
+$themeColors: #409eff, #67c23a, #8b590f, #f54343, #6c6d71;
+
+@for $i from 1 through length($themeColors) {
+    .btn.type-#{$i} {
+        width: 100px;
+        height: 30px;
+        $color: nth($themeColors, $i);
+        background-color: $color;
+        color: #fff;
+        &:hover {
+            background-color: lighten($color, 10%);
+        }
+        &:active {
+            background-color: darken($color, 10%);
+        }
+        &:disabled {
+            background-color: lighten($color, 10%);
+        }
+    }
+}
